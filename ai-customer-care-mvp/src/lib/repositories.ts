@@ -1,8 +1,8 @@
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { conversations, knowledgeItems, leads, settings } from '@/lib/mock-data';
 
 export async function listKnowledgeItems() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('knowledge_items')
     .select('id,title,content,category,status,source,created_at,updated_at')
     .order('created_at', { ascending: false });
@@ -18,7 +18,7 @@ export async function listKnowledgeItems() {
 }
 
 export async function listLeads() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('leads')
     .select('id,name,phone,email,interest,source,status,created_at')
     .order('created_at', { ascending: false });
@@ -37,7 +37,7 @@ export async function listLeads() {
 }
 
 export async function listConversations() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('conversations')
     .select('id,session_id,source,status,created_at')
     .order('created_at', { ascending: false });
@@ -54,7 +54,7 @@ export async function listConversations() {
 }
 
 export async function getAppSettings() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('settings')
     .select('company_name,bot_name,welcome_message,fallback_message,handoff_message,notification_email')
     .limit(1)
@@ -89,7 +89,7 @@ export async function createLead(input: {
     status: 'new',
   };
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('leads')
     .insert(payload)
     .select('id,name,phone,email,interest,source,status,created_at')
