@@ -22,17 +22,22 @@ Mở:
 - `/api/chat/message` API chat mock
 
 ## Việc cần làm tiếp để ra production
-1. Kết nối Supabase thật
-2. Thay mock data bằng DB
-3. Thay `getSuggestedAnswer()` bằng LLM + retrieval
-4. Tích hợp Google Sheets/CRM
-5. Thêm auth admin
-6. Viết test E2E
+1. Chạy `supabase/schema.sql`
+2. Chạy `supabase/seed.sql`
+3. Nếu cần, chạy `supabase/policies.sql`
+4. Thay `getSuggestedAnswer()` bằng LLM + retrieval
+5. Tích hợp Google Sheets/CRM
+6. Thêm auth admin
+7. Viết test E2E
 
 ## File quan trọng
 - `src/app/page.tsx` — landing page
 - `src/components/chat-widget.tsx` — widget chat
 - `src/app/admin/page.tsx` — admin demo
 - `src/lib/chat.ts` — mock orchestration
+- `src/lib/repositories.ts` — repository layer qua Supabase
 - `supabase/schema.sql` — schema DB
+- `supabase/seed.sql` — seed dữ liệu mẫu
+- `supabase/policies.sql` — RLS policies mẫu
+- `docs/SUPABASE_SETUP.md` — hướng dẫn setup nhanh
 - `docs/BACKLOG.md` — backlog triển khai
