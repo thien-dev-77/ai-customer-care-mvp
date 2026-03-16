@@ -1,5 +1,6 @@
-import { knowledgeItems } from '@/lib/mock-data';
+import { listKnowledgeItems } from '@/lib/repositories';
 
 export async function GET() {
-  return Response.json({ items: knowledgeItems });
+  const items = await listKnowledgeItems();
+  return Response.json({ items });
 }

@@ -1,5 +1,6 @@
-import { conversations } from '@/lib/mock-data';
+import { listConversations } from '@/lib/repositories';
 
 export async function GET() {
-  return Response.json({ items: conversations });
+  const items = await listConversations();
+  return Response.json({ items });
 }

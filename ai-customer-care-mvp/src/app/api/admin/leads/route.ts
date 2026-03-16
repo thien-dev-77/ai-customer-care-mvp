@@ -1,5 +1,6 @@
-import { leads } from '@/lib/mock-data';
+import { listLeads } from '@/lib/repositories';
 
 export async function GET() {
-  return Response.json({ items: leads });
+  const items = await listLeads();
+  return Response.json({ items });
 }

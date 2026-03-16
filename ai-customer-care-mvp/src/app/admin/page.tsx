@@ -1,7 +1,19 @@
 import { SectionCard } from '@/components/section-card';
-import { conversations, knowledgeItems, leads, settings } from '@/lib/mock-data';
+import {
+  getAppSettings,
+  listConversations,
+  listKnowledgeItems,
+  listLeads,
+} from '@/lib/repositories';
 
-export default function AdminPage() {
+export default async function AdminPage() {
+  const [knowledgeItems, leads, conversations, settings] = await Promise.all([
+    listKnowledgeItems(),
+    listLeads(),
+    listConversations(),
+    getAppSettings(),
+  ]);
+
   return (
     <div className="min-h-screen bg-slate-100 p-6 text-slate-900 lg:p-10">
       <div className="mx-auto max-w-7xl space-y-6">
@@ -43,7 +55,7 @@ export default function AdminPage() {
                     <tr key={item.id} className="border-t border-slate-200 bg-white">
                       <td className="px-4 py-3 font-medium">{item.title}</td>
                       <td className="px-4 py-3">{item.category}</td>
-                      <td className="px-4 py-3">{item.keywords.join(', ')}</td>
+                      <td className="px-4 py-3">{Array.isArray(item.keywords) ? item.keywords.join(', ') : ''}</td>
                     </tr>
                   ))}
                 </tbody>
