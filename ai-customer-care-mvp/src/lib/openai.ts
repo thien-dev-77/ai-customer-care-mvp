@@ -3,7 +3,7 @@ const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 export async function generateAnswer(params: {
   message: string;
   knowledge: Array<{ title: string; content: string; category: string }>;
-  welcomeMessage?: string;
+  products?: Array<{ name: string; permalink: string; price?: number | null; shortDescription?: string }>;
   fallbackMessage: string;
   handoffMessage: string;
 }) {
@@ -16,16 +16,27 @@ export async function generateAnswer(params: {
     .map((item, index) => `${index + 1}. [${item.category}] ${item.title}: ${item.content}`)
     .join('\n');
 
+  const productContext = (params.products ?? [])
+    .map(
+      (item, index) =>
+        `${index + 1}. ${item.name} | Giá: ${item.price ?? 'Liên hệ'} | Link: ${item.permalink} | Mô tả: ${item.shortDescription ?? ''}`
+    )
+    .join('\n');
+
   const systemPrompt = [
-    'Bạn là trợ lý AI chăm sóc khách hàng cho doanh nghiệp.',
-    'Chỉ trả lời dựa trên knowledge base được cung cấp.',
-    'Không bịa giá, chính sách, tính năng ngoài dữ liệu.',
-    'Nếu câu hỏi vượt ngoài knowledge hoặc không chắc, hãy trả lời ngắn gọn và nói rõ là chưa chắc.',
+    'Bạn là trợ lý AI tư vấn bán hàng điện máy cho website thương mại điện tử.',
+    'Chỉ trả lời dựa trên knowledge base và danh sách sản phẩm được cung cấp.',
+    'Nếu có sản phẩm phù hợp, hãy gợi ý ngắn gọn, nêu vì sao phù hợp và luôn kèm link sản phẩm.',
+    'Không bịa giá, chính sách, tồn kho, thông số ngoài dữ liệu.',
     'Nếu người dùng có ý định mua hàng, demo, báo giá hoặc muốn được tư vấn, hãy khuyến khích để lại tên và số điện thoại.',
     'Nếu người dùng muốn gặp người thật, hãy hướng sang handoff.',
+    'Trả lời ngắn gọn, dễ hiểu, ưu tiên tiếng Việt tự nhiên.',
     '',
     'Knowledge base:',
     context || 'Không có knowledge.',
+    '',
+    'Sản phẩm gợi ý:',
+    productContext || 'Không có sản phẩm phù hợp được tìm thấy.',
   ].join('\n');
 
   const response = await fetch(OPENAI_API_URL, {

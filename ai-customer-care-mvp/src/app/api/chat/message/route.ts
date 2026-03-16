@@ -1,6 +1,6 @@
 import { detectIntent } from '@/lib/chat';
 import { generateAnswer } from '@/lib/openai';
-import { getAppSettings, listKnowledgeItems } from '@/lib/repositories';
+import { getAppSettings, listKnowledgeItems, searchProducts } from '@/lib/repositories';
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -10,9 +10,10 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Message is required' }, { status: 400 });
   }
 
-  const [knowledge, settings] = await Promise.all([
+  const [knowledge, settings, products] = await Promise.all([
     listKnowledgeItems(),
     getAppSettings(),
+    searchProducts(message),
   ]);
 
   const suggestedAction = detectIntent(message);
@@ -25,7 +26,12 @@ export async function POST(request: Request) {
         content: item.content,
         category: item.category,
       })),
-      welcomeMessage: settings.welcomeMessage,
+      products: products.map((item) => ({
+        name: item.name,
+        permalink: item.permalink,
+        price: item.price,
+        shortDescription: item.shortDescription,
+      })),
       fallbackMessage: settings.fallbackMessage,
       handoffMessage: settings.handoffMessage,
     });
@@ -35,6 +41,7 @@ export async function POST(request: Request) {
       confidence: suggestedAction === 'answer' ? 0.85 : 0.78,
       suggestedAction,
       sessionId: body?.sessionId ?? null,
+      products,
     });
   } catch (error) {
     return Response.json({
@@ -42,6 +49,7 @@ export async function POST(request: Request) {
       confidence: 0.35,
       suggestedAction: suggestedAction === 'answer' ? 'fallback' : suggestedAction,
       sessionId: body?.sessionId ?? null,
+      products,
       error: error instanceof Error ? error.message : 'Unknown error',
     });
   }

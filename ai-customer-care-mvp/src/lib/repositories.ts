@@ -121,3 +121,64 @@ export async function createLead(input: {
     createdAt: data.created_at,
   };
 }
+
+export async function searchProducts(query: string) {
+  const normalized = query.toLowerCase();
+  const { data, error } = await supabaseAdmin
+    .from('products')
+    .select('woo_id,name,permalink,price,regular_price,sale_price,stock_status,short_description,categories,attributes,image_url')
+    .limit(12);
+
+  if (error || !data) return [];
+
+  const tokens = normalized.split(/\s+/).filter(Boolean);
+  const scored = data
+    .map((item) => {
+      const haystack = [
+        item.name,
+        item.short_description,
+        JSON.stringify(item.categories ?? []),
+        JSON.stringify(item.attributes ?? []),
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      let score = 0;
+      for (const token of tokens) {
+        if (haystack.includes(token)) score += 1;
+      }
+      if (score === 0 && tokens.length > 0) return null;
+      return {
+        wooId: item.woo_id,
+        name: item.name,
+        permalink: item.permalink,
+        price: item.sale_price ?? item.price ?? item.regular_price,
+        stockStatus: item.stock_status,
+        shortDescription: item.short_description ?? '',
+        imageUrl: item.image_url,
+        categories: item.categories ?? [],
+        attributes: item.attributes ?? [],
+        score,
+      };
+    })
+    .filter(
+      (
+        item
+      ): item is {
+        wooId: number;
+        name: string;
+        permalink: string;
+        price: number | null;
+        stockStatus: string | null;
+        shortDescription: string;
+        imageUrl: string | null;
+        categories: unknown[];
+        attributes: unknown[];
+        score: number;
+      } => item !== null
+    )
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+
+  return scored;
+}
