@@ -32,7 +32,20 @@ const QUERY_SYNONYMS: Record<string, string[]> = {
   '1hp': ['1 hp', '9000btu', '9000 btu'],
   '1.5hp': ['1.5 hp', '12000btu', '12000 btu'],
   '2hp': ['2 hp', '18000btu', '18000 btu'],
+  'máy khoan': ['may khoan', 'khoan pin', 'khoan dong luc', 'khoan be tong', 'drill'],
+  'máy cắt': ['may cat', 'may mai', 'cua dia'],
+  'máy bắn vít': ['may ban vit', 'bat vit', 'khoan pin'],
 };
+
+const PRODUCT_GROUPS: Array<{ label: string; keywords: string[] }> = [
+  { label: 'máy khoan', keywords: ['may khoan', 'khoan pin', 'khoan dong luc', 'khoan be tong', 'drill'] },
+  { label: 'máy lạnh', keywords: ['may lanh', 'dieu hoa', '9000btu', '12000btu', '18000btu'] },
+  { label: 'tủ lạnh', keywords: ['tu lanh', 'ngan da', 'side by side'] },
+  { label: 'máy giặt', keywords: ['may giat', 'cua ngang', 'cua truoc', 'cua tren'] },
+  { label: 'tivi', keywords: ['tivi', 'tv', 'google tv', 'smart tv', '4k'] },
+  { label: 'máy bắn vít', keywords: ['may ban vit', 'bat vit', 'khoan pin'] },
+  { label: 'máy cắt', keywords: ['may cat', 'may mai', 'cua dia'] },
+];
 
 function stripHtml(input: string) {
   return input.replace(/<[^>]*>/g, ' ');
@@ -99,6 +112,16 @@ function expandTokens(query: string) {
   return [...tokenSet].filter(Boolean);
 }
 
+function detectProductGroup(query: string) {
+  const normalized = normalizeText(query);
+  for (const group of PRODUCT_GROUPS) {
+    if (group.keywords.some((keyword) => normalized.includes(normalizeText(keyword)))) {
+      return group;
+    }
+  }
+  return null;
+}
+
 function buildProductSearchBlob(item: SearchableProduct) {
   return normalizeText(
     [
@@ -112,7 +135,7 @@ function buildProductSearchBlob(item: SearchableProduct) {
   );
 }
 
-function scoreProduct(item: SearchableProduct, tokens: string[]) {
+function scoreProduct(item: SearchableProduct, tokens: string[], detectedGroupKeywords: string[]) {
   const name = normalizeText(item.name);
   const shortDescription = normalizeText(item.short_description ?? '');
   const description = normalizeText(item.description ?? '');
@@ -125,18 +148,22 @@ function scoreProduct(item: SearchableProduct, tokens: string[]) {
 
   for (const token of tokens) {
     if (!token) continue;
-
     if (name.includes(token)) score += 8;
-    if (categories.includes(token)) score += 6;
+    if (categories.includes(token)) score += 9;
     if (attributes.includes(token)) score += 7;
     if (shortDescription.includes(token)) score += 4;
     if (description.includes(token)) score += 2;
     if (sku.includes(token)) score += 10;
   }
 
+  if (detectedGroupKeywords.length > 0) {
+    const groupHit = detectedGroupKeywords.some((keyword) => blob.includes(normalizeText(keyword)));
+    if (groupHit) score += 20;
+    else score -= 8;
+  }
+
   const normalizedQuery = tokens.join(' ');
   if (normalizedQuery && name.includes(normalizedQuery)) score += 12;
-
   if (item.stock_status === 'instock') score += 2;
   if (blob.includes('inverter') && tokens.some((t) => t.includes('inverter') || t.includes('tiet kiem dien'))) score += 3;
 
@@ -267,6 +294,8 @@ export async function createLead(input: {
 export async function searchProducts(query: string) {
   const tokens = expandTokens(query);
   const normalizedQuery = normalizeText(query);
+  const detectedGroup = detectProductGroup(query);
+  const detectedGroupKeywords = detectedGroup?.keywords ?? [];
 
   const { data, error } = await supabaseAdmin
     .from('products')
@@ -274,14 +303,14 @@ export async function searchProducts(query: string) {
       'woo_id,name,permalink,price,regular_price,sale_price,stock_status,short_description,description,categories,attributes,image_url,sku'
     )
     .eq('status', 'publish')
-    .limit(400);
+    .limit(500);
 
   if (error || !data) return [];
 
   const scored = (data as SearchableProduct[])
     .map((item) => {
       const blob = buildProductSearchBlob(item);
-      const score = scoreProduct(item, tokens);
+      const score = scoreProduct(item, tokens, detectedGroupKeywords);
 
       if (!normalizedQuery) return null;
       if (score <= 0 && !blob.includes(normalizedQuery)) return null;
